@@ -11,29 +11,31 @@ yandex_key =os.getenv("YANDEX_KEY")
 
 pytesseract.pytesseract.tesseract_cmd = f"{tesseract_cmd}"
 
-image_path = 'test.png'
+images=['test.png']
 
-image = Image.open(image_path)
+def start_translating(images):
+    for image_path in images:
+        image = Image.open(image_path)
+        chinese_text = pytesseract.image_to_string(image, lang='chi_sim')
+        chinese_text = chinese_text.replace('\n','')
 
-chinese_text = pytesseract.image_to_string(image, lang='chi_sim')
-chinese_text = chinese_text.replace('\n','')
+        translate_with_google(chinese_text)
+        # translate_with_yandex(chinese_text)
 
-# free translator
-translator = Translator()
-google_translated_text = translator.translate(chinese_text, src='zh-cn', dest='en')
+def translate_with_google(chinese_text):
+    translator = Translator()
+    translated_text = translator.translate(chinese_text, src='zh-cn', dest='en')
+    print(f"translated from google {translated_text}")
 
-# paid translator
-endpoint = "https://translate.yandex.net/api/v1.5/tr.json/translate"
-params = {
-    'key': yandex_key,
-    'text': chinese_text,
-    'lang': 'zh-en'
-}
-
-response = requests.post(endpoint, data=params)
-translated_text = response.json()['text'][0]
-
-# Print the extracted text
-print(chinese_text)
-print(translated_text)
-print(google_translated_text)
+def translate_with_yandex(chinese_text):
+    endpoint = "https://translate.yandex.net/api/v1.5/tr.json/translate"
+    params = {
+        'key': yandex_key,
+        'text': chinese_text,
+        'lang': 'zh-en'
+    }
+    response = requests.post(endpoint, data=params)
+    translated_text = response.json()['text'][0]
+    print(f"translated from yandex {translated_text}")
+    
+start_translating(images)
