@@ -1,14 +1,11 @@
 import pytesseract
-import requests
 from dotenv import load_dotenv
 import os
 from PIL import Image
 from googletrans import Translator
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph
-from reportlab.lib.units import inch
+from pdf_handler import save_translated_text_to_pdf
+import re
+from xml.sax.saxutils import escape
 
 
 load_dotenv()
@@ -18,17 +15,23 @@ yandex_key =os.getenv("YANDEX_KEY")
 
 pytesseract.pytesseract.tesseract_cmd = f"{tesseract_cmd}"
 
-images=['test.png']
 
-def start_translating(images):
+
+def start_translating(images, saved_file_name):
     translated_texts=""
     for image_path in images:
         image = Image.open(image_path)
+    
         chinese_text = pytesseract.image_to_string(image, lang='chi_sim')
-        translated_text = translate_with_google(chinese_text.replace('\n',' ')) 
-        print(translated_text)
-
-    save_translated_text_to_pdf(translated_texts,"test_text.pdf")
+        if len(chinese_text)< 10:
+            print(image_path)
+            
+        translated_text = translate_with_google(chinese_text.replace('\n',' '))
+        formatted_text = remove_html_tags(translated_text) 
+        
+        translated_texts += formatted_text
+        
+    save_translated_text_to_pdf(translated_texts,saved_file_name)
 
 def translate_with_google(chinese_text):
     translator = Translator()
@@ -45,11 +48,10 @@ def translate_with_google(chinese_text):
         print(f"An error occurred: {e}")
         return None
   
-def save_translated_text_to_pdf( translated_text, output_pdf_path):
-    pdf = SimpleDocTemplate(output_pdf_path, pagesize=letter)
-    styles = getSampleStyleSheet()
-    text_paragraph = Paragraph(translated_text, style=styles['Normal'])
-    pdf.build([text_paragraph])
+def remove_html_tags(text):
+    clean_text = re.sub(r'<.*?>', '', text)
+    clean_text = escape(clean_text, entities={"&": "&amp;", "<": "&lt;", ">": "&gt;"})
+    return clean_text
 
 
 def get_image_file_paths(root_folder):
@@ -64,9 +66,10 @@ def get_image_file_paths(root_folder):
     
     return image_file_paths
 
-root_folder = 'image'
+root_folder = 'image/lastChap'
+saved_file_name = 'pdf/translated/lastChap.pdf'
 
 # Get all image file paths
 image_paths = get_image_file_paths(root_folder)
 
-start_translating(image_paths)
+start_translating(image_paths, saved_file_name)
